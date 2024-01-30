@@ -1,22 +1,22 @@
 data {
   int<lower=1> n_teams;
   int<lower=1> n_games;
-  int<lower=1, upper=n_teams> home_team[n_games];
-  int<lower=1, upper=n_teams> away_team[n_games];
-  int<lower=0> home_goals[n_games];
-  int<lower=0> away_goals[n_games];
+  array[n_games] int<lower=1, upper=n_teams> home_team;
+  array[n_games] int<lower=1, upper=n_teams> away_team;
+  array[n_games] int<lower=0> home_goals;
+  array[n_games] int<lower=0> away_goals;
 }
 
 parameters {
   real home_advantage;
-  real offense_raw[n_teams - 1];
-  real defense_raw[n_teams - 1];
+  array[n_teams - 1] real offense_raw;
+  array[n_teams - 1] real defense_raw;
 }
 
 transformed parameters {
   // Enforce sum-to-zero constraint
-  real offense[n_teams];
-  real defense[n_teams];
+  array[n_teams] real offense;
+  array[n_teams] real defense;
 
   for (t in 1:(n_teams-1)) {
     offense[t] = offense_raw[t];

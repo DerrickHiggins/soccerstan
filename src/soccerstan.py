@@ -5,7 +5,7 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import pystan
+import stan
 
 import models
 
@@ -51,29 +51,32 @@ def fit_model(data, team_map, model, use_cache, **kwargs):
      * use_cache -- Whether the compiled Stan model should be loaded
                     from/saved to file : Bool
 
-    Keyword arguments are passed to pystan.StanModel.sampling
+    Keyword arguments are passed to stan.StanModel.sampling
     """
+    model_data = {
+        'n_teams': len(team_map),
+        'n_games': len(data),
+        'home_team': data['home_team_id'].to_list(),
+        'away_team': data['away_team_id'].to_list(),
+        'home_goals': data['home_goals'].to_list(),
+        'away_goals': data['away_goals'].to_list()
+    }
+
+    with open(model.modelfile, "rt") as infile:
+        stan_program = infile.read()
+
     if use_cache:
         cache_file = os.path.join(os.path.dirname(__file__),
                                   '../cache/{0}.pkl'.format(model.name))
         try:
             stan_model = joblib.load(cache_file)
         except FileNotFoundError:
-            stan_model = pystan.StanModel(model.modelfile)
+            stan_model = stan.build(program_code=stan_program, data=model_data)
             joblib.dump(stan_model, cache_file)
     else:
-        stan_model = pystan.StanModel(model.modelfile)
+        stan_model = stan.build(program_code=stan_program, data=model_data)
 
-    model_data = {
-        'n_teams': len(team_map),
-        'n_games': len(data),
-        'home_team': data['home_team_id'],
-        'away_team': data['away_team_id'],
-        'home_goals': data['home_goals'],
-        'away_goals': data['away_goals']
-    }
-
-    fit = stan_model.sampling(data=model_data, **kwargs)
+    fit = stan_model.sample(data=model_data, **kwargs)
     output = fit.extract()
 
     # Tidy the output a little...
